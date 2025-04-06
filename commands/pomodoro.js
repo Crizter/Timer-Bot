@@ -5,7 +5,7 @@ import { handleStopSession } from "../handlers/pomodoro/stop.js";
 import { handleSetup } from "../handlers/pomodoro/setup.js";
 import { handleStatus } from "../handlers/pomodoro/status.js";
 import { handleRest } from "../handlers/pomodoro/rest.js";
-
+import { handleSkip } from "../handlers/pomodoro/skip.js";
 
 
 export const data = new SlashCommandBuilder()
@@ -26,6 +26,9 @@ export const data = new SlashCommandBuilder()
     )
     .addSubcommand(subcommand =>
         subcommand.setName("timer").setDescription("Start the timer")
+    )
+    .addSubcommand(subcommand =>
+        subcommand.setName("skip").setDescription("Skip the current phase")
     )
     .addSubcommand(subcommand => 
         subcommand.setName("setup").setDescription("Configure your Pomodoro settings")
@@ -76,6 +79,9 @@ export async function execute(interaction, client) {
             break;
         case "study":
             await handleStudy(interaction);
+            break;
+        case "skip":
+            await handleSkip(interaction);
             break;
         // case "timer":
         //     await interaction.reply("⏲️ Timer: X minutes remaining.");

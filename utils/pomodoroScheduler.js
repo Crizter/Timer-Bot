@@ -1,6 +1,14 @@
 // pomodoroScheduler.js
 import { Session } from "../models/sessions.models.js";
+import { getSessionEmbed } from "./getsessionEmbed.js";
+import {
+    EmbedBuilder,
+    ButtonBuilder,
+    ButtonStyle,
+    ActionRowBuilder,
+  } from "discord.js";
 
+  
 export const activeTimers = new Map();
 
 export async function startPomodoroLoop(userId, client) {
@@ -94,39 +102,37 @@ try {
 
   loop();
 }
-
 async function remindUser(userId, phase, duration, client) {
-  try {
-    const guilds = client.guilds.cache;
-    for (const [, guild] of guilds) {
-      const member = await guild.members.fetch(userId).catch(() => null);
-      if (!member) continue;
-
-      const message = `⏰ <@${userId}> ${
-        phase === "study"
-          ? `Study session started! Focus for ${duration} min.`
-          : phase === "break"
-          ? `Short break! Chill for ${duration} min.`
-          : `Long break started! Relax for ${duration} min.`
-      }`;
-
-      const voiceChannel = member.voice?.channel;
-      const textChannel =
-        guild.systemChannel || guild.channels.cache.find((ch) => ch.isTextBased() && ch.viewable);
-
-      if (voiceChannel?.sendable) {
-        voiceChannel.send(message).catch(() => {});
-        console.log(`📣 Sent reminder in voice channel for phase: ${phase}`);
-      } else if (textChannel) {
-        textChannel.send(message).catch(() => {});
-        console.log(`📣 Sent reminder in text channel for phase: ${phase}`);
-      } else {
-        console.log(`⚠️ No channel found to send reminder for ${userId}`);
+    try {
+      const guilds = client.guilds.cache;
+      for (const [, guild] of guilds) {
+        const member = await guild.members.fetch(userId).catch(() => null);
+        if (!member) continue;
+  
+        const voiceChannel = member.voice?.channel;
+        const textChannel =
+          guild.systemChannel ||
+          guild.channels.cache.find((ch) => ch.isTextBased() && ch.viewable);
+  
+        const { embed, components } = await getSessionEmbed(userId);
+        const message = `⏰ <@${userId}> ${
+          phase === "study"
+            ? `Time to focus!`
+            : phase === "break"
+            ? `Break time!`
+            : `Long break time!`
+        }`;
+  
+        if (voiceChannel?.sendable) {
+          voiceChannel.send({ content: message, embeds: [embed], components }).catch(() => {});
+        } else if (textChannel) {
+          textChannel.send({ content: message, embeds: [embed], components }).catch(() => {});
+        }
+  
+        console.log(`📣 Sent reminder and embed for phase: ${phase}`);
+        break;
       }
-
-      break;
+    } catch (err) {
+      console.error("❌ Reminder error:", err);
     }
-  } catch (err) {
-    console.error("❌ Reminder error:", err);
   }
-}

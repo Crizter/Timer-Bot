@@ -1,13 +1,13 @@
-// commands/pomodoro/stopsession.js
+// handlers/pomodoro/skip.js
 import { Session } from "../../models/sessions.models.js";
-import { activeTimers } from "../../utils/pomodoroScheduler.js";
+import { activeTimers, startPomodoroLoop } from "../../utils/pomodoroScheduler.js";
 import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
 } from "discord.js";
 
-export async function handleStopSession(interaction) {
+export async function handleSkip(interaction) {
   const userId = interaction.user.id;
 
   try {
@@ -15,59 +15,66 @@ export async function handleStopSession(interaction) {
 
     if (!session) {
       const replyOptions = {
-        content: "❌ No active session to stop.",
-        ephemeral: interaction.isButton() ? true : false,
+        content: "❌ No active session to skip.",
+        ephemeral: interaction.isButton?.() ? true : false,
       };
-
       return interaction.reply(replyOptions);
     }
 
+    // Clear the current timer
     const timer = activeTimers.get(userId);
     if (timer) {
       clearTimeout(timer);
       activeTimers.delete(userId);
     }
 
-    await Session.deleteOne({ _id: session._id });
+    // Flip the phase
+    const newPhase = session.currentPhase === "study" ? "break" : "study";
+    session.currentPhase = newPhase;
 
-    const replyMsg = 
-  "⏹️ Your Pomodoro session has been stopped. Take care!\n**Note:** After stopping the session, you need to reset the Pomodoro by running `/pomodoro setup`, otherwise the default `25/5/15` values will be used.";
+    await session.save();
 
-    if (interaction.isButton()) {
+    const replyMsg =
+      newPhase === "study"
+        ? "⏩ Skipped! Time to focus again. 🔥"
+        : "⏩ Skipped! Take a short break now. ☕";
+
+    if (interaction.isButton?.()) {
       await interaction.reply(replyMsg);
 
-      // 🔄 Update buttons if triggered from embed
+    //    update buttons (same layout)
       if (interaction.message) {
         const updatedRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
             .setCustomId("start_session")
             .setLabel("▶️ Start Session")
             .setStyle(ButtonStyle.Success)
-            .setDisabled(false),
+            .setDisabled(true),
 
           new ButtonBuilder()
             .setCustomId("stop_session")
             .setLabel("⛔ Stop")
             .setStyle(ButtonStyle.Danger)
-            .setDisabled(true),
+            .setDisabled(false),
 
           new ButtonBuilder()
             .setCustomId("skip_phase")
             .setLabel("⏭️ Skip Phase")
             .setStyle(ButtonStyle.Primary)
-            .setDisabled(true)
+            .setDisabled(false)
         );
 
         await interaction.message.edit({ components: [updatedRow] });
       }
     } else {
-      // from slash command
-      await interaction.editReply(replyMsg);
+      await interaction.reply(replyMsg);
     }
-  } catch (err) {
-    console.error("❌ Failed to stop session:", err);
-    const errorMsg = "⚠️ An error occurred while stopping your session.";
 
+    // Restart loop with updated phase
+    startPomodoroLoop(userId, interaction.client);
+  } catch (err) {
+    console.error("❌ Failed to skip phase:", err);
+    const errorMsg = "⚠️ Something went wrong while skipping.";
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply(errorMsg);
     } else {
