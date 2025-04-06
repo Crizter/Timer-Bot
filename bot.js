@@ -1,10 +1,21 @@
 import "dotenv/config";
-import { Client, Events, GatewayIntentBits, REST, Routes, Collection } from "discord.js";
-import { data as pomodoroData, execute as pomodoroExecute } from "./commands/pomodoro.js"; // Import Pomodoro command
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  REST,
+  Routes,
+  Collection,
+} from "discord.js";
+import {
+  data as pomodoroData,
+  execute as pomodoroExecute,
+} from "./commands/pomodoro.js";
 import { connectToCluster } from "./database/db.js";
+
 // Create a new bot client
 export const client = new Client({
-    intents: [GatewayIntentBits.Guilds], // No need for message intents with slash commands
+  intents: [GatewayIntentBits.Guilds],
 });
 
 // Store commands
@@ -12,18 +23,18 @@ client.commands = new Collection();
 
 // Define commands
 const commands = [
-    {
-        name: "ping",
-        description: "Replies with Pong!",
-    },
-    pomodoroData.toJSON(), // Add Pomodoro command
+  {
+    name: "ping",
+    description: "Replies with Pong!",
+  },
+  pomodoroData.toJSON(),
 ];
 
 // Add commands to collection
 client.commands.set("ping", {
-    execute: async (interaction) => {
-        await interaction.reply("🏓 Pong!");
-    },
+  execute: async (interaction) => {
+    await interaction.reply("🏓 Pong!");
+  },
 });
 client.commands.set("pomodoro", { execute: pomodoroExecute });
 
@@ -32,57 +43,59 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
 
 // Register the slash commands
 async function registerCommands() {
-    try {
-        console.log("🚀 Registering slash commands...");
+  try {
+    console.log("🚀 Registering slash commands...");
 
-        await rest.put(
-            Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-            { body: commands }
-        );
+    await rest.put(
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
+      { body: commands }
+    );
 
-        console.log("✅ Slash commands registered successfully!");
-    } catch (error) {
-        console.error("❌ Error registering slash commands:", error);
-    }
+    console.log("✅ Slash commands registered successfully!");
+  } catch (error) {
+    console.error("❌ Error registering slash commands:", error);
+  }
 }
 
 // When the bot is ready
 client.once(Events.ClientReady, () => {
-    console.log(`✅ Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-// Handle interactions (slash commands)
+// Handle interactions
 client.on(Events.InteractionCreate, async (interaction) => {
-    if (!interaction.isChatInputCommand()) return;
+  if (!interaction.isChatInputCommand()) return;
 
-    const command = client.commands.get(interaction.commandName);
-    if (command) {
-        try {
-            await command.execute(interaction);
-        } catch (error) {
-            console.error(`❌ Error executing ${interaction.commandName}:`, error);
-            await interaction.reply({ content: "❌ An error occurred while executing this command.", ephemeral: true });
-        }
-    }
+  const command = client.commands.get(interaction.commandName);
+  if (!command) return;
+
+  try {
+    await command.execute(interaction,client);
+  } catch (error) {
+    console.error(`❌ Error executing /${interaction.commandName}:`, error);
+    // Updated: using flags to prevent ephemeral deprecation warning
+    await interaction.reply({
+      content: "❌ An error occurred while executing this command.",
+      flags: 64, // 64 = ephemeral
+    });
+  }
 });
 
-const uri = process.env.DATABASE_URL ; 
-
-
+const uri = process.env.DATABASE_URL;
 
 // Start the bot
 async function main() {
-    await registerCommands();
-    connectToCluster(uri) ; 
-    client.login(process.env.TOKEN).catch((error) => {
-        console.error("❌ Failed to log in:", error);
-    });
+  await registerCommands();
+  await connectToCluster(uri); // ✅ Await MongoDB connection before anything
+  await client.login(process.env.TOKEN);
 
-
-    // Handle uncaught exceptions
-    process.on("uncaughtException", (error) => {
-        console.error("❌ Uncaught Exception:", error);
-    });
+  // Catch unhandled exceptions
+  process.on("uncaughtException", (error) => {
+    console.error("❌ Uncaught Exception:", error);
+  });
 }
 
 main();
