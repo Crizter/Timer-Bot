@@ -1,3 +1,4 @@
+// pomodoroScheduler.js
 import { Session } from "../models/sessions.models.js";
 
 export const activeTimers = new Map();
@@ -12,11 +13,13 @@ export async function startPomodoroLoop(userId, client) {
     longBreak: session.longBreakDuration,
   };
 
-  const totalSessions = session.sessionsBeforeLongBreak;
-  let completedSessionPairs = 0;
+  const totalSessionsBeforeLongBreak = session.sessionsBeforeLongBreak;
+  const maxSessions = session.maxSessions || totalSessionsBeforeLongBreak;
+
+  let completedSessions = 0;
 
   console.log(`▶️ Pomodoro started for ${userId}`);
-  console.log(`⏱️ Durations — Work: ${durations.study}m, Break: ${durations.break}m, Long Break: ${durations.longBreak}m, Sessions: ${totalSessions}`);
+  console.log(`⏱️ Work: ${durations.study}m | Break: ${durations.break}m | Long Break: ${durations.longBreak}m | Sessions before long break: ${totalSessionsBeforeLongBreak} | Max sessions: ${maxSessions}`);
 
   const runPhase = async (phase, duration) => {
     console.log(`🔁 Starting ${phase} phase for ${duration} minute(s)...`);
@@ -26,6 +29,7 @@ export async function startPomodoroLoop(userId, client) {
       {
         currentPhase: phase,
         endTime: new Date(Date.now() + duration * 60 * 1000),
+        completedSessions,
       }
     );
 
@@ -38,19 +42,53 @@ export async function startPomodoroLoop(userId, client) {
   };
 
   const loop = async () => {
-    while (completedSessionPairs < totalSessions) {
-      await runPhase("study", durations.study);
-      await runPhase("break", durations.break);
-      completedSessionPairs += 1;
+    while (completedSessions < maxSessions) {
+      for (let i = 0; i < totalSessionsBeforeLongBreak && completedSessions < maxSessions; i++) {
+        await runPhase("study", durations.study);
+        completedSessions++;
 
-      console.log(`✅ Session ${completedSessionPairs} of ${totalSessions} completed`);
+        if (completedSessions < maxSessions) {
+          await runPhase("break", durations.break);
+        }
+
+        console.log(`✅ Session ${completedSessions} of ${maxSessions} done`);
+      }
+
+      if (completedSessions < maxSessions) {
+        await runPhase("longBreak", durations.longBreak);
+        console.log(`🌴 Took a long break after ${completedSessions} sessions`);
+      }
     }
-
-    await runPhase("longBreak", durations.longBreak);
 
     await Session.updateOne({ userId }, { isActive: false });
     activeTimers.delete(userId);
+    // Mention the user in their server
+    const userMention = `<@${userId}>`;
 
+try {
+    const guilds = client.guilds.cache;
+    for (const [, guild] of guilds) {
+      const member = await guild.members.fetch(userId).catch(() => null);
+      if (!member) continue;
+  
+      const message = `🏁 ${userMention} Your Pomodoro session is **complete**! Great job today 🎉`;
+  
+      const voiceChannel = member.voice?.channel;
+      const textChannel =
+        guild.systemChannel || guild.channels.cache.find((ch) => ch.isTextBased() && ch.viewable);
+  
+      if (voiceChannel?.sendable) {
+        voiceChannel.send(message).catch(() => {});
+      } else if (textChannel) {
+        textChannel.send(message).catch(() => {});
+      }
+  
+      break;
+    }
+  } catch (err) {
+    console.error("❌ Failed to send session completion message:", err);
+  }
+  
     console.log(`🏁 Pomodoro complete for ${userId}. Session ended.`);
   };
 
