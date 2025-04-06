@@ -12,6 +12,11 @@ import {
   execute as pomodoroExecute,
 } from "./commands/pomodoro.js";
 import { connectToCluster } from "./database/db.js";
+import { handleRest } from "./handlers/pomodoro/rest.js";
+import { handleStart } from "./handlers/pomodoro/start.js";
+import { handleSetup } from "./handlers/pomodoro/setup.js";
+import { handleStopSession } from "./handlers/pomodoro/stop.js";
+import { handleSkip } from "./handlers/pomodoro/skip.js";
 
 // Create a new bot client
 export const client = new Client({
@@ -83,6 +88,22 @@ client.on(Events.InteractionCreate, async (interaction) => {
     });
   }
 });
+
+
+client.on("interactionCreate", async (interaction) => {
+    if (interaction.isButton()) {
+      switch (interaction.customId) {
+        case "start_session":
+          return handleStart(interaction, client); // reuse your existing start logic
+        case "stop_session":
+          return handleStopSession(interaction); // custom stop handler
+        case "skip_phase":
+          return handleSkip(interaction); // custom skip logic
+        
+      }
+    }
+  });
+  
 
 const uri = process.env.DATABASE_URL;
 
