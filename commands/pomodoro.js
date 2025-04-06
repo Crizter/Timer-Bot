@@ -5,13 +5,11 @@ import { handleStopSession } from "../handlers/pomodoro/stop.js";
 import { handleSetup } from "../handlers/pomodoro/setup.js";
 import { handleStatus } from "../handlers/pomodoro/status.js";
 import { handleRest } from "../handlers/pomodoro/rest.js";
-import { Client } from "discord.js";
 
-// const client = new Client({
-//     intents: ["Guilds"],
-// });
+
+
 export const data = new SlashCommandBuilder()
-    .setName("pomodoro") // 🔹 Add main command name
+    .setName("pomodoro") //   main command name
     .setDescription("Manage your Pomodoro sessions.")
     
     .addSubcommand(subcommand =>
@@ -58,9 +56,9 @@ export const data = new SlashCommandBuilder()
         )
         
     )
-    .addSubcommand(subcommand =>
-        subcommand.setName("status").setDescription("Check your current Pomodoro status")
-      )
+    // .addSubcommand(subcommand =>
+    //     subcommand.setName("status").setDescription("Check your current Pomodoro status")
+    //   )
 
 export async function execute(interaction, client) {
     const subcommand = interaction.options.getSubcommand();
@@ -95,9 +93,9 @@ export async function execute(interaction, client) {
                 sessionsBeforeLongBreak
             }); 
             break;
-            case "status":
-                await handleStatus(interaction);
-                break;
+            // case "status":
+            //     await handleStatus(interaction);
+            //     break;
            
         default:
             await interaction.reply("❌ Invalid Pomodoro command.");

@@ -8,32 +8,41 @@ export async function handleStatus(interaction) {
     if (!session || !session.isActive) {
       return await interaction.reply({
         content: "❌ You don’t have any active Pomodoro session. Use `/pomodoro start` to begin one!",
-        ephemeral: true,
+        ephemeral: false,
       });
     }
 
-    if (!session.startedAt || !session.duration) {
+    if (!session.endTime || !session.currentPhase) {
       return await interaction.reply({
         content: "⚠️ Session tracking hasn't started properly. Please restart your session.",
-        ephemeral: true,
+        ephemeral: false,
       });
     }
 
     const now = new Date();
-    const elapsed = Math.floor((now - session.startedAt) / 1000); // in seconds
-    const total = session.duration * 60; // session duration is in minutes
-    const remaining = Math.max(total - elapsed, 0); // never go negative
+    const remainingMs = new Date(session.endTime) - now;
 
-    const minutes = Math.floor(remaining / 60);
-    const seconds = remaining % 60;
+    if (remainingMs <= 0) {
+      return await interaction.reply({
+        content: "⏳ Your current phase just ended. Wait for the next one to begin!",
+        ephemeral: true,
+      });
+    }
 
-    const sessionType = session.type === "break" ? "☕ Break" : "📚 Study";
+    const minutes = Math.floor(remainingMs / 60000);
+    const seconds = Math.floor((remainingMs % 60000) / 1000);
+
+    const phaseLabel = session.currentPhase === "break"
+      ? "☕ Short Break"
+      : session.currentPhase === "longBreak"
+      ? "🌴 Long Break"
+      : "📚 Study";
 
     await interaction.reply({
-      content: `🔔 **${sessionType} session is active**
+      content: `🔔 **${phaseLabel} session is active**
 
 🕒 **Time Left:** \`${minutes}m ${seconds}s\`  
-🧭 **Started At:** <t:${Math.floor(session.startedAt.getTime() / 1000)}:t>`,
+⏳ **Ends At:** <t:${Math.floor(new Date(session.endTime).getTime() / 1000)}:t>`,
       ephemeral: true,
     });
 
