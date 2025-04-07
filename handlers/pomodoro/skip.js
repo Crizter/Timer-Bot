@@ -78,7 +78,8 @@ if (wasStudy) {
     }
 
     // Restart loop with updated phase
-    startPomodoroLoop(userId, interaction.client);
+    startPomodoroLoop(userId, interaction.client, interaction.channelId); 
+
   } catch (err) {
     console.error("❌ Failed to skip phase:", err);
     const errorMsg = "⚠️ Something went wrong while skipping.";

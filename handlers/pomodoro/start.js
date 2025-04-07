@@ -68,7 +68,7 @@ if (interaction.isButton && interaction.message) {
     }
   }
 
-    startPomodoroLoop(userId, client);
+    startPomodoroLoop(userId, client, interaction.channelId);
 
   } catch (err) {
     console.error("❌ Failed to start session:", err);
