@@ -1,17 +1,11 @@
-// pomodoroScheduler.js
+// utils/pomodoroScheduler.js
 import { Session } from "../models/sessions.models.js";
-import { getSessionEmbed } from "./getsessionEmbed.js";
-import {
-  EmbedBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  ActionRowBuilder,
-} from "discord.js";
+import { getSessionEmbed } from "./getSessionEmbed.js";
 
 export const activeTimers = new Map();
 
 export async function startPomodoroLoop(userId, client, channelId) {
-  const session = await Session.findOne({ userId, isActive: true });
+  let session = await Session.findOne({ userId, isActive: true });
   if (!session) return;
 
   const durations = {
@@ -21,26 +15,19 @@ export async function startPomodoroLoop(userId, client, channelId) {
   };
 
   const totalSessionsBeforeLongBreak = session.sessionsBeforeLongBreak;
-  const maxSessions = session.maxSessions || totalSessionsBeforeLongBreak;
+  const maxSessions = session.maxSessions;
 
-  let completedSessions = session.completedSessions || 0;
-
-  console.log(`▶️ Pomodoro started for ${userId}`);
-  console.log(
-    `⏱️ Work: ${durations.study}m | Break: ${durations.break}m | Long Break: ${durations.longBreak}m | Sessions before long break: ${totalSessionsBeforeLongBreak} | Max sessions: ${maxSessions}`
-  );
-
-  const runPhase = async (phase, duration) => {
-    console.log(`🔁 Starting ${phase} phase for ${duration} minute(s)...`);
+  const runPhase = async (phase) => {
+    const duration = durations[phase];
+    const newEndTime = new Date(Date.now() + duration * 60 * 1000);
 
     await Session.updateOne(
       { userId },
-      {
-        currentPhase: phase,
-        endTime: new Date(Date.now() + duration * 60 * 1000),
-        completedSessions,
-      }
+      { phase, endTime: newEndTime }
     );
+
+    session.phase = phase;
+    session.endTime = newEndTime;
 
     await remindUser(userId, phase, duration, client, channelId);
 
@@ -50,48 +37,58 @@ export async function startPomodoroLoop(userId, client, channelId) {
     });
   };
 
-  const loop = async () => {
-    while (completedSessions < maxSessions) {
-      for (
-        let i = 0;
-        i < totalSessionsBeforeLongBreak && completedSessions < maxSessions;
-        i++
-      ) {
-        await runPhase("study", durations.study);
-        completedSessions++;
+  while (true) {
+    session = await Session.findOne({ userId, isActive: true });
+    if (!session || session.completedSessions >= maxSessions) break;
 
-        if (completedSessions < maxSessions) {
-          await runPhase("break", durations.break);
-        }
+    const { phase, completedSessions } = session;
 
-        console.log(`✅ Session ${completedSessions} of ${maxSessions} done`);
-      }
-
-      if (completedSessions < maxSessions) {
-        await runPhase("longBreak", durations.longBreak);
-        console.log(`🌴 Took a long break after ${completedSessions} sessions`);
-      }
+    // Handle each phase dynamically
+    if (phase === "study") {
+      await runPhase("study");
+      await Session.updateOne({ userId }, { $inc: { completedSessions: 1 } });
+      session.completedSessions += 1;
+    } else if (phase === "break") {
+      await runPhase("break");
+    } else if (phase === "longBreak") {
+      await runPhase("longBreak");
+    } else {
+      console.log("⚠️ Unknown phase. Defaulting to study.");
+      await runPhase("study");
     }
 
-    await Session.updateOne({ userId }, { isActive: false });
-    activeTimers.delete(userId);
+    session = await Session.findOne({ userId, isActive: true });
+    if (!session || session.completedSessions >= maxSessions) break;
 
-    const userMention = `<@${userId}>`;
+    // Decide next phase
+    const isLongBreakTime =
+      session.completedSessions % totalSessionsBeforeLongBreak === 0;
 
-    try {
-      const channel = client.channels.cache.get(channelId);
-      if (channel?.isTextBased()) {
-        const message = `🏁 ${userMention} Your Pomodoro session is **complete**! Great job today 🎉`;
-        await channel.send(message);
-      }
-    } catch (err) {
-      console.error("❌ Failed to send session completion message:", err);
+    const nextPhase = session.phase === "study"
+      ? isLongBreakTime
+        ? "longBreak"
+        : "break"
+      : "study";
+
+    await Session.updateOne({ userId }, { phase: nextPhase });
+  }
+
+  // Final cleanup
+  await Session.updateOne({ userId }, { isActive: false });
+  activeTimers.delete(userId);
+
+  try {
+    const channel = client.channels.cache.get(channelId);
+    if (channel?.isTextBased()) {
+      await channel.send(
+        `🏁 <@${userId}> Your Pomodoro session is **complete**! Great job today 🎉`
+      );
     }
+  } catch (err) {
+    console.error("❌ Failed to send completion message:", err);
+  }
 
-    console.log(`🏁 Pomodoro complete for ${userId}. Session ended.`);
-  };
-
-  await loop(); // ✅ Important fix
+  console.log(`✅ Pomodoro complete for ${userId}`);
 }
 
 async function remindUser(userId, phase, duration, client, channelId) {
@@ -104,12 +101,12 @@ async function remindUser(userId, phase, duration, client, channelId) {
       phase === "study"
         ? `Time to focus!`
         : phase === "break"
-        ? `Break time!`
+        ? `Short break time!`
         : `Long break time!`
     }`;
 
     await channel.send({ content: message, embeds: [embed], components });
-    console.log(`📣 Sent reminder and embed for phase: ${phase}`);
+    console.log(`📣 Reminder sent for phase: ${phase}`);
   } catch (err) {
     console.error("❌ Reminder error:", err);
   }

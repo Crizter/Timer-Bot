@@ -25,7 +25,9 @@ const sessionSchema = new mongoose.Schema(
     },
     longBreakDuration: {
       type: Number, // in minutes
-      required: true,
+      // required: false,
+      required : true , 
+      
       min: 30,
       max: 120,
     },
@@ -51,7 +53,7 @@ const sessionSchema = new mongoose.Schema(
     },
     phase: {
       type: String,
-      enum: ["study", "break", "long_break"],
+      enum: ["study", "break", "longBreak"],
       default: "study",
     },
     endTime: {

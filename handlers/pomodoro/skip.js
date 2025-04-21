@@ -28,28 +28,50 @@ export async function handleSkip(interaction) {
       activeTimers.delete(userId);
     }
 
-// Store the current phase before flipping
-const wasStudy = session.currentPhase === "study";
-const wasBreak = session.currentPhase === "break" || session.currentPhase === "longBreak";
+    // Log current session state
+    const {
+      phase,
+      completedSessions,
+      sessionsBeforeLongBreak,
+      maxSessions,
+    } = session;
 
-// Flip phase
-session.currentPhase = wasStudy ? "break" : "study";
+    // Determine next phase
+    let nextPhase = "study";
+    let incrementSession = false;
 
-//  increment session if we just finished a study phase
-if (wasStudy) {
-  session.completedSessions += 1;
-}
+    if (phase === "study") {
+      incrementSession = true;
+
+      const newCount = completedSessions + 1;
+      session.completedSessions = newCount;
+
+      if (newCount >= maxSessions) {
+        nextPhase = "longBreak";
+      } else if (newCount % sessionsBeforeLongBreak === 0) {
+        nextPhase = "longBreak";
+      } else {
+        nextPhase = "break";
+      }
+    } else {
+      // Skipping a break or long break → go to study
+      nextPhase = "study";
+    }
+
+    session.phase = nextPhase;
+    session.endTime = new Date();
     await session.save();
 
     const replyMsg =
-      session.currentPhase === "study"
+      nextPhase === "study"
         ? "⏩ Skipped! Time to focus again. 🔥"
-        : "⏩ Skipped! Take a short break now. ☕";
+        : nextPhase === "break"
+        ? "⏩ Skipped! Take a short break now. ☕"
+        : "⏩ Skipped! Long break time. 🌴";
 
     if (interaction.isButton?.()) {
       await interaction.reply(replyMsg);
 
-    //    update buttons (same layout)
       if (interaction.message) {
         const updatedRow = new ActionRowBuilder().addComponents(
           new ButtonBuilder()
@@ -57,13 +79,11 @@ if (wasStudy) {
             .setLabel("▶️ Start Session")
             .setStyle(ButtonStyle.Success)
             .setDisabled(true),
-
           new ButtonBuilder()
             .setCustomId("stop_session")
             .setLabel("⛔ Stop")
             .setStyle(ButtonStyle.Danger)
             .setDisabled(false),
-
           new ButtonBuilder()
             .setCustomId("skip_phase")
             .setLabel("⏭️ Skip Phase")
@@ -77,11 +97,9 @@ if (wasStudy) {
       await interaction.reply(replyMsg);
     }
 
-    // Restart loop with updated phase
-    startPomodoroLoop(userId, interaction.client, interaction.channelId); 
+    startPomodoroLoop(userId, interaction.client, interaction.channelId);
 
   } catch (err) {
-    console.error("❌ Failed to skip phase:", err);
     const errorMsg = "⚠️ Something went wrong while skipping.";
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply(errorMsg);

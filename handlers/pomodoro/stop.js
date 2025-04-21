@@ -31,7 +31,8 @@ export async function handleStopSession(interaction) {
     await Session.deleteOne({ _id: session._id });
 
     const replyMsg = 
-  "⏹️ Your Pomodoro session has been stopped. Take care!\n**Note:** After stopping the session, you need to reset the Pomodoro by running `/pomodoro setup`, otherwise the default `25/5/15` values will be used.";
+  "⏹️ Your Pomodoro session has been stopped. Take care!\n**Note:** After you click the 'Stop' button, your current setup will be deleted. If you want to start a new one, you need to reset the Pomodoro by running `/pomodoro setup`. Otherwise, the default will be 25/5/15, and 4 sessions in total."
+
 
     if (interaction.isButton()) {
       await interaction.reply(replyMsg);

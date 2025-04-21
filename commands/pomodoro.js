@@ -36,12 +36,12 @@ export const data = new SlashCommandBuilder()
     .addSubcommand(subcommand => 
         subcommand
             .setName("setup")
-            .setDescription("Configure your Pomodoro settings")
+            .setDescription("Configure your Pomodoro session settings")
             
             .addIntegerOption(option =>
                 option
                     .setName("work")
-                    .setDescription("Set work duration in minutes (5-180)")
+                    .setDescription("Set the work duration in minutes (5-180)")
                     .setRequired(true)
                     .setMinValue(5)
                     .setMaxValue(180)

@@ -35,7 +35,7 @@ export async function handleSetup(interaction) {
 
     // Embed creation
     const embed = new EmbedBuilder()
-      .setTitle("✅ Pomodoro Session Setup")
+      .setTitle("✅ Pomodoro Session")
       .setDescription("Your custom Pomodoro routine has been saved. Here's a summary:")
       .addFields(
         { name: "⏱️ Work", value: `\`${work} min\``, inline: true },
