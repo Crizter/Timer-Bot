@@ -1,6 +1,6 @@
 // utils/pomodoroScheduler.js
 import { Session } from "../models/sessions.models.js";
-import { getSessionEmbed } from "./getSessionEmbed.js";
+import { getSessionEmbed } from "./getsessionEmbed.js";
 
 export const activeTimers = new Map();
 
