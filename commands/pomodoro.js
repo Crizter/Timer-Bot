@@ -18,9 +18,9 @@ export const data = new SlashCommandBuilder()
     .addSubcommand(subcommand =>
         subcommand.setName("start").setDescription("Start a Pomodoro session")
     )
-    .addSubcommand(subcommand =>
-        subcommand.setName("rest").setDescription("Take a short break")
-    )
+    // .addSubcommand(subcommand =>
+    //     subcommand.setName("rest").setDescription("Take a short break")
+    // )
     .addSubcommand(subcommand =>
         subcommand.setName("stopsession").setDescription("Stop the session")
     )

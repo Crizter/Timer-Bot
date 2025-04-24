@@ -9,7 +9,7 @@ export async function handleHelp(interaction) {
     .addFields(
       { name: "**/pomodoro setup**", value: "Configure your Pomodoro durations, breaks, and session limits." },
       { name: "**/pomodoro start**", value: "Start a Pomodoro session with default setup (25/5/15) with 4 sessions in total." },
-      { name: "**/pomodoro rest**", value: "Take a short manual break. Perfect for a quick recharge!" },
+      // { name: "**/pomodoro rest**", value: "Take a short manual break. Perfect for a quick recharge!" },
       { name: "**/pomodoro stopsession**", value: "Stop the currently active session and reset your progress." },
       { name: "**/pomodoro skip**", value: "Skip the current ongoing session (e.g., study → break)." },
       { name: "**/pomodoro help**", value: "Display this helpful guide." }

@@ -26,8 +26,7 @@ const sessionSchema = new mongoose.Schema(
     longBreakDuration: {
       type: Number, // in minutes
       // required: false,
-      required : true , 
-      
+      default: 30, 
       min: 30,
       max: 120,
     },
