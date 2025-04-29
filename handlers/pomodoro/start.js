@@ -13,11 +13,19 @@ export const handleStart = async (interaction, client) => {
     await interaction.deferReply();
 
     const existingSession = await Session.findOne({ userId, isActive: true });
+    // if (existingSession) {
+    //   return interaction.editReply({
+    //     content: "⚠️ You already have an active Pomodoro session!",
+    //   });
+    // }
+    
     if (existingSession) {
       return interaction.editReply({
-        content: "⚠️ You already have an active Pomodoro session!",
+        // content: "⚠️ You already have an active Pomodoro session!",
+        content : "⚠️ You already have an active Pomodoro session!", ephermal : true
       });
     }
+
 
     const userSession = await Session.findOne({ userId });
 
@@ -35,7 +43,11 @@ export const handleStart = async (interaction, client) => {
 
     await Session.findOneAndUpdate({ userId }, sessionData, { upsert: true });
 
-    await interaction.editReply(`⏳ Pomodoro session started!\nFocus for **${sessionData.workDuration} minutes**. Let’s get it! 🚀`);
+    await interaction.editReply({
+      content: `⏳ Pomodoro session started!\nFocus for **${sessionData.workDuration} minutes**. Let’s get it! 🚀`,
+      ephemeral: true
+    });
+    
 
 // ✅ If this is triggered from a button, update the buttons (safely check)
 if (interaction.isButton && interaction.message) {

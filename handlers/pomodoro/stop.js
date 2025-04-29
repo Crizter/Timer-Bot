@@ -35,7 +35,8 @@ export async function handleStopSession(interaction) {
 
 
     if (interaction.isButton()) {
-      await interaction.reply(replyMsg);
+      await interaction.reply({ content: replyMsg, ephemeral: true });
+
 
       // 🔄 Update buttons if triggered from embed
       if (interaction.message) {
@@ -63,7 +64,8 @@ export async function handleStopSession(interaction) {
       }
     } else {
       // from slash command
-      await interaction.editReply(replyMsg);
+      await interaction.editReply({ content: replyMsg, ephemeral: true });
+
     }
   } catch (err) {
     console.error("❌ Failed to stop session:", err);
